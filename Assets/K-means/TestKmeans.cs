@@ -103,18 +103,36 @@ public class MyData : IKMeansData
 
 }
 
+
+
+
+
+
+
+
 public class TestKmeans : MonoBehaviour
 {
+    public enum TextureType { SOURCE, RESULT, AVERAGERESULT}
+    public TextureType texType = TextureType.RESULT;
+
     public MyData[] MyDatas;
     public Texture2D sourceTex;
-
+    public bool LogData = false;
     public int ColorPalleteSize = 5;
-    public Vector2 ReSize = new Vector2(128,128);
-    // Use this for initialization
-    void Start () {
+    public Vector2 SampleSize = new Vector2(128,128);
 
-        Texture2D tex = Resize(sourceTex, (int)ReSize.x, (int)ReSize.y);
-        Color[] pix = tex.GetPixels(0, 0, tex.width, tex.height);
+    public Color[] ResultMainColors;
+    //---------
+    private Texture2D resultTex, avrTex;
+    private Renderer _renderer;
+
+    void Start ()
+    {
+        _renderer = GetComponent<Renderer>();
+
+
+        resultTex = Resize(sourceTex, (int)SampleSize.x, (int)SampleSize.y);
+        Color[] pix = resultTex.GetPixels(0, 0, resultTex.width, resultTex.height);
 
         MyDatas = new MyData[pix.Length];
         for (int i = 0; i < pix.Length; i++)
@@ -134,29 +152,57 @@ public class TestKmeans : MonoBehaviour
 	        MyData.SortData(data);
         }
 
-        MyData.Print();
+        if(LogData)
+            MyData.Print();
 
 
 
+        ResultMainColors = new Color[ColorPalleteSize];
+        int mainColIndex = 0;
 
         Color[] newPix = new Color[pix.Length];
         int ii = 0;
-        foreach (var tuple in MyData.SortedData)
+
+
+        foreach (var colorList in MyData.SortedData)
         {
-            foreach (var data in tuple.Value)
+            float rSum = 0.0f; float gSum = 0.0f; float bSum = 0.0f;
+            int count = 0;
+            foreach (var color in colorList.Value)
             {
-                newPix[ii].r = data.values[0];
-                newPix[ii].g = data.values[1];
-                newPix[ii].b = data.values[2];
+                newPix[ii].r = color.values[0]; rSum += newPix[ii].r;
+                newPix[ii].g = color.values[1]; gSum += newPix[ii].g;
+                newPix[ii].b = color.values[2]; bSum += newPix[ii].b;
                 ii++;
+                count++;
             }
+            ResultMainColors[mainColIndex++] = new Color(rSum/count,gSum/count,bSum/count);
         }
-        tex.SetPixels(newPix);
-        tex.Apply();
-        GetComponent<Renderer>().material.mainTexture = tex;
+        resultTex.SetPixels(newPix);
+        resultTex.Apply();
+        avrTex = ColorPalletteTex(ResultMainColors);
+        ShowTexture();
+    }
 
+    void Update()
+    {
+        ShowTexture();
+    }
 
-
+    public void ShowTexture()
+    {
+        switch (texType)
+        {
+            case TextureType.RESULT:
+                _renderer.material.mainTexture = resultTex;
+                break;
+            case TextureType.AVERAGERESULT:
+                _renderer.material.mainTexture = avrTex;
+                break;
+            case TextureType.SOURCE:
+                _renderer.material.mainTexture = sourceTex;
+                break;
+        }
     }
 
     public static Texture2D Resize(Texture2D source, int newWidth, int newHeight)
@@ -170,6 +216,14 @@ public class TestKmeans : MonoBehaviour
         nTex.ReadPixels(new Rect(0, 0, newWidth, newWidth), 0, 0);
         nTex.Apply();
         RenderTexture.active = null;
+        return nTex;
+    }
+
+    public static Texture2D ColorPalletteTex(Color[] cols)
+    {
+        Texture2D nTex = new Texture2D(1, cols.Length);
+        nTex.SetPixels(0,0,1,cols.Length,cols);
+        nTex.Apply();
         return nTex;
     }
 
