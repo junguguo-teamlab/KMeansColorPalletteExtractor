@@ -3,7 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using KMeansCluster;
-
+using System.Linq;
 //[Serializable]
 public class MyData : IKMeansData
 {
@@ -134,9 +134,17 @@ public class TestKmeans : MonoBehaviour
         resultTex = Resize(sourceTex, (int)SampleSize.x, (int)SampleSize.y);
         Color[] pix = resultTex.GetPixels(0, 0, resultTex.width, resultTex.height);
 
-        MyDatas = new MyData[pix.Length];
+
+        //---**jungu:the following needs fixing: ----- how to resize an object array?
+        //----update: end up using a list and convert it to array
+        List<MyData> dataList = new List<MyData>();
         for (int i = 0; i < pix.Length; i++)
-            MyDatas[i] = new MyData(new float[] { pix[i].r, pix[i].g, pix[i].b });
+        {
+            if (pix[i].r * 0.3 + pix[i].g * 0.59 + pix[i].b * 0.11 > 0.3f) //drop dark colors
+                dataList.Add( new MyData(new float[] { pix[i].r, pix[i].g, pix[i].b }) );
+        }
+        MyDatas = dataList.ToArray();
+
 
         MyData[] means = new MyData[ColorPalleteSize];
 	    for (int i = 0; i < ColorPalleteSize; i++)
